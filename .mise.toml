@@ -1,0 +1,82 @@
+[tools]
+actionlint = "1.7.12"
+opentofu = "1.12.3"
+python = "3.12.13"
+
+[env]
+PYTHONUNBUFFERED = "1"
+
+[tasks.deps]
+description = "Install Python dependencies."
+run = "python -m pip install --disable-pip-version-check -r requirements.txt"
+
+[tasks.fmt]
+description = "Format OpenTofu files."
+run = "tofu fmt -recursive"
+
+[tasks.fmt-check]
+description = "Check OpenTofu formatting."
+run = "tofu fmt -check -recursive"
+
+[tasks.validate]
+description = "Validate the root OpenTofu configuration without remote backend."
+run = [
+  "tofu init -backend=false -input=false",
+  "tofu validate",
+]
+
+[tasks.workflow-check]
+description = "Validate GitHub Actions workflows."
+run = "actionlint"
+
+[tasks.check]
+depends = ["fmt-check", "validate", "workflow-check"]
+description = "Run all local checks."
+
+[tasks.init]
+description = "Initialize OpenTofu with local backend config when present."
+run = "set -a; [ ! -f .env ] || . ./.env; set +a; backend_config=\"\"; [ ! -f backend.hcl ] || backend_config=\"-backend-config=backend.hcl\"; tofu init $backend_config"
+
+[tasks.plan]
+depends = ["init"]
+description = "Run OpenTofu plan with local environment."
+run = "set -a; [ ! -f .env ] || . ./.env; set +a; tofu plan"
+
+[tasks.apply]
+depends = ["init"]
+description = "Run interactive OpenTofu apply with local environment."
+run = "set -a; [ ! -f .env ] || . ./.env; set +a; tofu apply"
+
+[tasks.apply-auto]
+depends = ["init"]
+description = "Run non-interactive OpenTofu apply with local environment."
+run = "set -a; [ ! -f .env ] || . ./.env; set +a; tofu apply -auto-approve"
+
+[tasks.destroy]
+depends = ["init"]
+description = "Run OpenTofu destroy with local environment."
+run = "set -a; [ ! -f .env ] || . ./.env; set +a; tofu destroy"
+
+[tasks.refresh]
+depends = ["init"]
+description = "Refresh OpenTofu state with local environment."
+run = "set -a; [ ! -f .env ] || . ./.env; set +a; tofu refresh"
+
+[tasks.state-list]
+depends = ["init"]
+description = "List OpenTofu state resources."
+run = "tofu state list"
+
+[tasks.ci-init]
+description = "Initialize OpenTofu in CI."
+run = "tofu init -backend-config=backend.hcl -input=false"
+
+[tasks.ci-apply]
+description = "Apply OpenTofu in CI, replacing a missing or terminated Oracle instance."
+depends = ["deps"]
+run = "scripts/ci_apply.sh"
+
+[tasks.ci-health-check]
+description = "Verify Oracle instance lifecycle and SSH reachability in CI."
+depends = ["deps"]
+run = "scripts/ci_health_check.sh"
