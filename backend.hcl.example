@@ -1,0 +1,3 @@
+endpoints = {
+  s3 = "https://your-r2-account-id.r2.cloudflarestorage.com"
+}

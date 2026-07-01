@@ -1,0 +1,80 @@
+name: OpenTofu
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Apply infrastructure changes"
+        required: true
+        default: false
+        type: boolean
+
+concurrency:
+  group: opentofu-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate Infrastructure
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.0
+
+      - name: Setup mise
+        uses: jdx/mise-action@v4.2.0
+
+      - name: Check
+        run: mise run check
+
+  apply:
+    name: Apply Infrastructure
+    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.apply == true) }}
+    needs: validate
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      OCI_PRIVATE_KEY: ${{ secrets.OCI_PRIVATE_KEY }}
+      TF_VAR_compartment_ocid: ${{ secrets.OCI_COMPARTMENT_OCID }}
+      TF_VAR_fingerprint: ${{ secrets.OCI_FINGERPRINT }}
+      TF_VAR_private_key_path: ${{ github.workspace }}/oci_api_key.pem
+      TF_VAR_region: ${{ secrets.OCI_REGION }}
+      TF_VAR_ssh_public_key: ${{ secrets.OCI_SSH_PUBLIC_KEY }}
+      TF_VAR_tenancy_ocid: ${{ secrets.OCI_TENANCY_OCID }}
+      TF_VAR_user_ocid: ${{ secrets.OCI_USER_OCID }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.0
+
+      - name: Setup mise
+        uses: jdx/mise-action@v4.2.0
+
+      - name: Create OCI API key
+        run: |
+          printf '%s\n' "$OCI_PRIVATE_KEY" > oci_api_key.pem
+          chmod 600 oci_api_key.pem
+
+      - name: Create backend config
+        run: |
+          cat > backend.hcl <<'EOF'
+          endpoints = {
+            s3 = "https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com"
+          }
+          EOF
+
+      - name: OpenTofu Init
+        run: mise run ci-init
+
+      - name: OpenTofu Apply
+        run: mise run ci-apply
+
+      - name: Verify Oracle instance health
+        run: mise run ci-health-check
