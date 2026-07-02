@@ -14,7 +14,24 @@ data "oci_core_images" "this" {
 
 locals {
   availability_domain = data.oci_identity_availability_domains.this.availability_domains[var.availability_domain_index].name
-  image_id            = data.oci_core_images.this.images[0].id
+  cloud_init = templatefile("${path.module}/templates/cloud-init.yaml.tftpl", {
+    agent_flow_repo_url = var.agent_flow_repo_url
+    agent_flow_root     = var.agent_flow_root
+    agent_flow_ref      = var.agent_flow_ref
+    dashboard_port      = var.symphony_dashboard_port
+    service_user        = var.symphony_service_user
+    state_root          = var.symphony_state_root
+    symphony_repo_url   = var.symphony_repo_url
+    symphony_ref        = var.symphony_ref
+    symphony_root       = var.symphony_root
+    workspace_root      = var.symphony_workspace_root
+  })
+  image_id  = data.oci_core_images.this.images[0].id
+  user_data = base64encode(local.cloud_init)
+}
+
+resource "terraform_data" "symphony_bootstrap" {
+  input = var.enable_symphony_bootstrap ? sha256(local.cloud_init) : ""
 }
 
 resource "oci_core_vcn" "this" {
@@ -89,9 +106,14 @@ resource "oci_core_instance" "this" {
     subnet_id        = oci_core_subnet.public.id
   }
 
-  metadata = {
-    ssh_authorized_keys = var.ssh_public_key
-  }
+  metadata = merge(
+    {
+      ssh_authorized_keys = var.ssh_public_key
+    },
+    var.enable_symphony_bootstrap ? {
+      user_data = local.user_data
+    } : {}
+  )
 
   shape_config {
     memory_in_gbs = var.memory_in_gbs
@@ -102,5 +124,11 @@ resource "oci_core_instance" "this" {
     boot_volume_size_in_gbs = var.boot_volume_size_in_gbs
     source_id               = local.image_id
     source_type             = "image"
+  }
+
+  lifecycle {
+    replace_triggered_by = [
+      terraform_data.symphony_bootstrap,
+    ]
   }
 }

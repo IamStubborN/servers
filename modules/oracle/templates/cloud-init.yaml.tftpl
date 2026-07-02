@@ -1,0 +1,142 @@
+#cloud-config
+package_update: true
+packages:
+  - autoconf
+  - ca-certificates
+  - curl
+  - gcc
+  - gcc-c++
+  - git
+  - gzip
+  - make
+  - ncurses-devel
+  - openssl-devel
+  - openssh-clients
+  - perl
+  - readline-devel
+  - tar
+  - unzip
+  - which
+  - xz
+  - zlib-devel
+
+users:
+  - default
+  - name: ${service_user}
+    gecos: Symphony Runner
+    home: ${state_root}
+    shell: /bin/bash
+    lock_passwd: true
+
+write_files:
+  - path: /etc/symphony/env.example
+    owner: root:${service_user}
+    permissions: "0640"
+    content: |
+      LINEAR_API_KEY=
+      AGENT_FLOW_REPO_URL=${agent_flow_repo_url}
+      AGENT_FLOW_REF=${agent_flow_ref}
+      AGENT_FLOW_ROOT=${agent_flow_root}
+      SYMPHONY_REPO_URL=${symphony_repo_url}
+      SYMPHONY_REF=${symphony_ref}
+      SYMPHONY_WORKSPACE_ROOT=${workspace_root}
+      CODEX_HOME=${state_root}/.codex
+  - path: /usr/local/bin/symphony-sync
+    owner: root:root
+    permissions: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+
+      if [ -f /etc/symphony/env ]; then
+        set -a
+        . /etc/symphony/env
+        set +a
+      fi
+
+      : "$${LINEAR_API_KEY:?Set LINEAR_API_KEY in /etc/symphony/env}"
+
+      AGENT_FLOW_REPO_URL="$${AGENT_FLOW_REPO_URL:-${agent_flow_repo_url}}"
+      AGENT_FLOW_REF="$${AGENT_FLOW_REF:-${agent_flow_ref}}"
+      AGENT_FLOW_ROOT="$${AGENT_FLOW_ROOT:-${agent_flow_root}}"
+      SYMPHONY_REPO_URL="$${SYMPHONY_REPO_URL:-${symphony_repo_url}}"
+      SYMPHONY_REF="$${SYMPHONY_REF:-${symphony_ref}}"
+      SYMPHONY_ROOT="${symphony_root}"
+      SYMPHONY_WORKSPACE_ROOT="$${SYMPHONY_WORKSPACE_ROOT:-${workspace_root}}"
+
+      sync_repo() {
+        repo_url="$1"
+        ref="$2"
+        target="$3"
+
+        if [ ! -d "$target/.git" ]; then
+          rm -rf "$target"
+          git clone "$repo_url" "$target"
+        fi
+
+        git -C "$target" fetch --prune origin
+
+        if git -C "$target" rev-parse --verify "origin/$ref" >/dev/null 2>&1; then
+          git -C "$target" checkout -B "$ref" "origin/$ref"
+          git -C "$target" reset --hard "origin/$ref"
+        else
+          git -C "$target" checkout --detach "$ref"
+        fi
+      }
+
+      mkdir -p "$SYMPHONY_WORKSPACE_ROOT"
+
+      sync_repo "$SYMPHONY_REPO_URL" "$SYMPHONY_REF" "$SYMPHONY_ROOT"
+      sync_repo "$AGENT_FLOW_REPO_URL" "$AGENT_FLOW_REF" "$AGENT_FLOW_ROOT"
+
+      git config --global --add safe.directory "$SYMPHONY_ROOT" || true
+      git config --global --add safe.directory "$AGENT_FLOW_ROOT" || true
+
+      export AGENT_FLOW_ROOT
+      export SYMPHONY_WORKSPACE_ROOT
+      export PATH="${state_root}/.local/bin:/usr/local/bin:/usr/bin:/bin"
+
+      cd "$SYMPHONY_ROOT/elixir"
+      mise trust
+      mise install
+      mise exec -- mix setup
+      mise exec -- mix build
+  - path: /etc/systemd/system/symphony.service
+    owner: root:root
+    permissions: "0644"
+    content: |
+      [Unit]
+      Description=OpenAI Symphony runtime
+      Wants=network-online.target
+      After=network-online.target
+      ConditionPathExists=/etc/symphony/env
+
+      [Service]
+      Type=simple
+      User=${service_user}
+      Group=${service_user}
+      WorkingDirectory=${state_root}
+      EnvironmentFile=/etc/symphony/env
+      Environment=AGENT_FLOW_ROOT=${agent_flow_root}
+      Environment=SYMPHONY_WORKSPACE_ROOT=${workspace_root}
+      Environment=CODEX_HOME=${state_root}/.codex
+      Environment=PATH=${state_root}/.local/bin:/usr/local/bin:/usr/bin:/bin
+      ExecStartPre=/usr/local/bin/symphony-sync
+      ExecStart=/bin/bash -lc 'cd ${symphony_root}/elixir && mise exec -- ./bin/symphony ${agent_flow_root}/WORKFLOW.md --port ${dashboard_port}'
+      Restart=always
+      RestartSec=30
+
+      [Install]
+      WantedBy=multi-user.target
+
+runcmd:
+  - mkdir -p /etc/symphony ${agent_flow_root} ${symphony_root} ${workspace_root} ${state_root}/.codex ${state_root}/.ssh
+  - chown -R ${service_user}:${service_user} ${agent_flow_root} ${symphony_root} ${workspace_root} ${state_root}
+  - chmod 700 ${state_root}/.ssh
+  - ssh-keyscan github.com > ${state_root}/.ssh/known_hosts
+  - chown ${service_user}:${service_user} ${state_root}/.ssh/known_hosts
+  - chmod 644 ${state_root}/.ssh/known_hosts
+  - runuser -l ${service_user} -c 'curl -fsSL https://mise.run | sh'
+  - runuser -l ${service_user} -c 'curl -fsSL https://chatgpt.com/codex/install.sh | CODEX_NON_INTERACTIVE=1 sh'
+  - systemctl daemon-reload
+  - systemctl enable symphony.service
