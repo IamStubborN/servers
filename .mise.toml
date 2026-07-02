@@ -80,3 +80,7 @@ run = "scripts/ci_apply.sh"
 description = "Verify Oracle instance lifecycle and SSH reachability in CI."
 depends = ["deps"]
 run = "scripts/ci_health_check.sh"
+
+[tasks.ci-bootstrap-symphony]
+description = "Restore Symphony runtime secrets and verify the service in CI."
+run = "scripts/ci_bootstrap_symphony.sh"
