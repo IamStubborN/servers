@@ -21,7 +21,7 @@ run = "tofu fmt -check -recursive"
 [tasks.validate]
 description = "Validate the root OpenTofu configuration without remote backend."
 run = [
-  "tofu init -backend=false -input=false",
+  "rm -rf .terraform && tofu init -backend=false -input=false",
   "tofu validate",
 ]
 

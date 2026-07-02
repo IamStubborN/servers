@@ -30,7 +30,7 @@ users:
 
 write_files:
   - path: /etc/symphony/env.example
-    owner: root:${service_user}
+    owner: root:root
     permissions: "0640"
     content: |
       LINEAR_API_KEY=
@@ -130,8 +130,11 @@ write_files:
       WantedBy=multi-user.target
 
 runcmd:
+  - id -u ${service_user} >/dev/null 2>&1 || useradd --system --create-home --home-dir ${state_root} --shell /bin/bash ${service_user}
+  - usermod --home ${state_root} --shell /bin/bash ${service_user}
   - mkdir -p /etc/symphony ${agent_flow_root} ${symphony_root} ${workspace_root} ${state_root}/.codex ${state_root}/.ssh
   - chown -R ${service_user}:${service_user} ${agent_flow_root} ${symphony_root} ${workspace_root} ${state_root}
+  - chown root:${service_user} /etc/symphony/env.example
   - chmod 700 ${state_root}/.ssh
   - ssh-keyscan github.com > ${state_root}/.ssh/known_hosts
   - chown ${service_user}:${service_user} ${state_root}/.ssh/known_hosts
