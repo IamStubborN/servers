@@ -67,6 +67,7 @@ scp "${ssh_opts[@]}" \
   "$tmp_dir/symphony.env" \
   "$tmp_dir/codex-auth.json" \
   "$tmp_dir/symphony-github-key" \
+  "scripts/install_symphony_auto_refresh.sh" \
   "scripts/install_symphony_runtime.sh" \
   "opc@$public_ip:/tmp/"
 
@@ -82,7 +83,9 @@ if ! command -v gh >/dev/null 2>&1; then
 fi
 
 sudo install -m 0755 -o root -g root /tmp/install_symphony_runtime.sh /usr/local/bin/symphony-install-runtime
+sudo install -m 0755 -o root -g root /tmp/install_symphony_auto_refresh.sh /usr/local/bin/symphony-install-auto-refresh
 sudo SERVICE_USER=symphony STATE_ROOT=/var/lib/symphony /usr/local/bin/symphony-install-runtime
+sudo SERVICE_USER=symphony SERVICE_NAME=symphony.service /usr/local/bin/symphony-install-auto-refresh
 
 sudo install -d -m 0750 -o root -g symphony /etc/symphony
 sudo install -m 0640 -o root -g symphony /tmp/symphony.env /etc/symphony/env
@@ -96,10 +99,10 @@ sudo -u symphony -H bash -lc 'ssh-keygen -y -f /var/lib/symphony/.ssh/id_ed25519
 sudo -u symphony -H bash -lc 'ssh-keyscan -H github.com > /var/lib/symphony/.ssh/known_hosts 2>/dev/null'
 sudo chmod 0644 /var/lib/symphony/.ssh/id_ed25519.pub /var/lib/symphony/.ssh/known_hosts
 
-rm -f /tmp/symphony.env /tmp/codex-auth.json /tmp/symphony-github-key /tmp/install_symphony_runtime.sh
+rm -f /tmp/symphony.env /tmp/codex-auth.json /tmp/symphony-github-key /tmp/install_symphony_auto_refresh.sh /tmp/install_symphony_runtime.sh
 
 sudo systemctl daemon-reload
-sudo systemctl restart symphony.service
+sudo /usr/local/bin/symphony-agent-flow-refresh --restart-if-idle
 
 for _ in $(seq 1 90); do
   if systemctl is-active --quiet symphony.service; then

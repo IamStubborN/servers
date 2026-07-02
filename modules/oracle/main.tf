@@ -13,20 +13,22 @@ data "oci_core_images" "this" {
 }
 
 locals {
-  availability_domain = data.oci_identity_availability_domains.this.availability_domains[var.availability_domain_index].name
-  install_runtime     = file("${path.module}/../../scripts/install_symphony_runtime.sh")
+  availability_domain  = data.oci_identity_availability_domains.this.availability_domains[var.availability_domain_index].name
+  install_auto_refresh = file("${path.module}/../../scripts/install_symphony_auto_refresh.sh")
+  install_runtime      = file("${path.module}/../../scripts/install_symphony_runtime.sh")
   cloud_init = templatefile("${path.module}/templates/cloud-init.yaml.tftpl", {
-    agent_flow_repo_url = var.agent_flow_repo_url
-    agent_flow_root     = var.agent_flow_root
-    agent_flow_ref      = var.agent_flow_ref
-    dashboard_port      = var.symphony_dashboard_port
-    install_runtime     = local.install_runtime
-    service_user        = var.symphony_service_user
-    state_root          = var.symphony_state_root
-    symphony_repo_url   = var.symphony_repo_url
-    symphony_ref        = var.symphony_ref
-    symphony_root       = var.symphony_root
-    workspace_root      = var.symphony_workspace_root
+    agent_flow_repo_url  = var.agent_flow_repo_url
+    agent_flow_root      = var.agent_flow_root
+    agent_flow_ref       = var.agent_flow_ref
+    dashboard_port       = var.symphony_dashboard_port
+    install_auto_refresh = local.install_auto_refresh
+    install_runtime      = local.install_runtime
+    service_user         = var.symphony_service_user
+    state_root           = var.symphony_state_root
+    symphony_repo_url    = var.symphony_repo_url
+    symphony_ref         = var.symphony_ref
+    symphony_root        = var.symphony_root
+    workspace_root       = var.symphony_workspace_root
   })
   image_id  = data.oci_core_images.this.images[0].id
   user_data = base64encode(local.cloud_init)
