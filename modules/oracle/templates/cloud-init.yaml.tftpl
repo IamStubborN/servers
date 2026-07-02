@@ -124,6 +124,7 @@ write_files:
       Environment=PATH=${state_root}/.local/bin:/usr/local/bin:/usr/bin:/bin
       ExecStartPre=/usr/local/bin/symphony-sync
       ExecStart=/bin/bash -lc 'cd ${symphony_root}/elixir && mise exec -- ./bin/symphony --i-understand-that-this-will-be-running-without-the-usual-guardrails ${agent_flow_root}/WORKFLOW.md --port ${dashboard_port}'
+      TimeoutStartSec=1800
       Restart=always
       RestartSec=30
 
