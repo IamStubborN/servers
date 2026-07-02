@@ -4,6 +4,7 @@ packages:
   - autoconf
   - ca-certificates
   - curl
+  - dnf-plugins-core
   - gcc
   - gcc-c++
   - git
@@ -68,6 +69,12 @@ write_files:
           git clone "$repo_url" "$target"
         fi
 
+        if git -C "$target" remote get-url origin >/dev/null 2>&1; then
+          git -C "$target" remote set-url origin "$repo_url"
+        else
+          git -C "$target" remote add origin "$repo_url"
+        fi
+
         git -C "$target" fetch --prune origin
 
         if git -C "$target" rev-parse --verify "origin/$ref" >/dev/null 2>&1; then
@@ -116,7 +123,7 @@ write_files:
       Environment=CODEX_HOME=${state_root}/.codex
       Environment=PATH=${state_root}/.local/bin:/usr/local/bin:/usr/bin:/bin
       ExecStartPre=/usr/local/bin/symphony-sync
-      ExecStart=/bin/bash -lc 'cd ${symphony_root}/elixir && mise exec -- ./bin/symphony ${agent_flow_root}/WORKFLOW.md --port ${dashboard_port}'
+      ExecStart=/bin/bash -lc 'cd ${symphony_root}/elixir && mise exec -- ./bin/symphony --i-understand-that-this-will-be-running-without-the-usual-guardrails ${agent_flow_root}/WORKFLOW.md --port ${dashboard_port}'
       Restart=always
       RestartSec=30
 
@@ -133,6 +140,7 @@ runcmd:
   - ssh-keyscan github.com > ${state_root}/.ssh/known_hosts
   - chown ${service_user}:${service_user} ${state_root}/.ssh/known_hosts
   - chmod 644 ${state_root}/.ssh/known_hosts
+  - command -v gh >/dev/null 2>&1 || (dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo && dnf install -y gh)
   - runuser -l ${service_user} -c 'curl -fsSL https://mise.run | MISE_INSTALL_MUSL=1 sh'
   - runuser -l ${service_user} -c 'curl -fsSL https://chatgpt.com/codex/install.sh | CODEX_NON_INTERACTIVE=1 sh'
   - systemctl daemon-reload

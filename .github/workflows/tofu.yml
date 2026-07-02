@@ -42,6 +42,11 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       OCI_PRIVATE_KEY: ${{ secrets.OCI_PRIVATE_KEY }}
+      OCI_SSH_PRIVATE_KEY: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
+      SYMPHONY_CODEX_AUTH_JSON_B64: ${{ secrets.SYMPHONY_CODEX_AUTH_JSON_B64 }}
+      SYMPHONY_GITHUB_SSH_PRIVATE_KEY: ${{ secrets.SYMPHONY_GITHUB_SSH_PRIVATE_KEY }}
+      SYMPHONY_GITHUB_TOKEN: ${{ secrets.SYMPHONY_GITHUB_TOKEN }}
+      SYMPHONY_LINEAR_API_KEY: ${{ secrets.SYMPHONY_LINEAR_API_KEY }}
       TF_VAR_compartment_ocid: ${{ secrets.OCI_COMPARTMENT_OCID }}
       TF_VAR_fingerprint: ${{ secrets.OCI_FINGERPRINT }}
       TF_VAR_private_key_path: ${{ github.workspace }}/oci_api_key.pem
@@ -78,3 +83,6 @@ jobs:
 
       - name: Verify Oracle instance health
         run: mise run ci-health-check
+
+      - name: Bootstrap Symphony runtime
+        run: mise run ci-bootstrap-symphony
