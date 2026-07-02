@@ -22,11 +22,6 @@ packages:
 
 users:
   - default
-  - name: ${service_user}
-    gecos: Symphony Runner
-    home: ${state_root}
-    shell: /bin/bash
-    lock_passwd: true
 
 write_files:
   - path: /etc/symphony/env.example
