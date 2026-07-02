@@ -107,6 +107,11 @@ write_files:
     permissions: "0755"
     content: |
 ${indent(6, install_runtime)}
+  - path: /usr/local/bin/symphony-install-auto-refresh
+    owner: root:root
+    permissions: "0755"
+    content: |
+${indent(6, install_auto_refresh)}
   - path: /etc/systemd/system/symphony.service
     owner: root:root
     permissions: "0644"
@@ -149,6 +154,7 @@ runcmd:
   - command -v gh >/dev/null 2>&1 || (dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo && dnf install -y gh)
   - runuser -l ${service_user} -c 'curl -fsSL https://mise.run | MISE_INSTALL_MUSL=1 sh'
   - SERVICE_USER=${service_user} STATE_ROOT=${state_root} /usr/local/bin/symphony-install-runtime
+  - SERVICE_USER=${service_user} SERVICE_NAME=symphony.service /usr/local/bin/symphony-install-auto-refresh
   - runuser -l ${service_user} -c 'curl -fsSL https://chatgpt.com/codex/install.sh | CODEX_NON_INTERACTIVE=1 sh'
   - systemctl daemon-reload
   - systemctl enable symphony.service
