@@ -49,8 +49,6 @@ write_files:
         set +a
       fi
 
-      : "$${LINEAR_API_KEY:?Set LINEAR_API_KEY in /etc/symphony/env}"
-
       AGENT_FLOW_REPO_URL="$${AGENT_FLOW_REPO_URL:-${agent_flow_repo_url}}"
       AGENT_FLOW_REF="$${AGENT_FLOW_REF:-${agent_flow_ref}}"
       AGENT_FLOW_ROOT="$${AGENT_FLOW_ROOT:-${agent_flow_root}}"
@@ -135,7 +133,7 @@ runcmd:
   - ssh-keyscan github.com > ${state_root}/.ssh/known_hosts
   - chown ${service_user}:${service_user} ${state_root}/.ssh/known_hosts
   - chmod 644 ${state_root}/.ssh/known_hosts
-  - runuser -l ${service_user} -c 'curl -fsSL https://mise.run | sh'
+  - runuser -l ${service_user} -c 'curl -fsSL https://mise.run | MISE_INSTALL_MUSL=1 sh'
   - runuser -l ${service_user} -c 'curl -fsSL https://chatgpt.com/codex/install.sh | CODEX_NON_INTERACTIVE=1 sh'
   - systemctl daemon-reload
   - systemctl enable symphony.service
