@@ -34,9 +34,18 @@ fi
 AGENT_FLOW_ROOT="${AGENT_FLOW_ROOT:-/opt/agent-flow}"
 AGENT_FLOW_REF="${AGENT_FLOW_REF:-main}"
 AGENT_FLOW_REPO_URL="${AGENT_FLOW_REPO_URL:-git@github.com:AttentionWorld/agent-flow.git}"
+SERVICE_HOME="$(getent passwd "$SERVICE_USER" | cut -d: -f6)"
 
 log() {
   printf 'symphony-agent-flow-refresh: %s\n' "$*"
+}
+
+run_as_service() {
+  runuser -u "$SERVICE_USER" -- env HOME="$SERVICE_HOME" "$@"
+}
+
+git_as_service() {
+  run_as_service git "$@"
 }
 
 has_active_agents() {
@@ -68,18 +77,18 @@ restart_when_idle() {
     exit 0
   fi
 
-  git config --global --add safe.directory "$AGENT_FLOW_ROOT" || true
+  git_as_service config --global --add safe.directory "$AGENT_FLOW_ROOT" || true
 
-  if git -C "$AGENT_FLOW_ROOT" remote get-url origin >/dev/null 2>&1; then
-    git -C "$AGENT_FLOW_ROOT" remote set-url origin "$AGENT_FLOW_REPO_URL"
+  if git_as_service -C "$AGENT_FLOW_ROOT" remote get-url origin >/dev/null 2>&1; then
+    git_as_service -C "$AGENT_FLOW_ROOT" remote set-url origin "$AGENT_FLOW_REPO_URL"
   else
-    git -C "$AGENT_FLOW_ROOT" remote add origin "$AGENT_FLOW_REPO_URL"
+    git_as_service -C "$AGENT_FLOW_ROOT" remote add origin "$AGENT_FLOW_REPO_URL"
   fi
 
-  git -C "$AGENT_FLOW_ROOT" fetch --prune origin "$AGENT_FLOW_REF"
+  git_as_service -C "$AGENT_FLOW_ROOT" fetch --prune origin "$AGENT_FLOW_REF"
 
-  current="$(git -C "$AGENT_FLOW_ROOT" rev-parse HEAD)"
-  target="$(git -C "$AGENT_FLOW_ROOT" rev-parse FETCH_HEAD)"
+  current="$(git_as_service -C "$AGENT_FLOW_ROOT" rev-parse HEAD)"
+  target="$(git_as_service -C "$AGENT_FLOW_ROOT" rev-parse FETCH_HEAD)"
 
   if [ "$current" = "$target" ]; then
     if [ "$RESTART_IF_IDLE" = true ]; then
@@ -96,8 +105,8 @@ restart_when_idle() {
   fi
 
   log "updating $AGENT_FLOW_ROOT $current -> $target"
-  git -C "$AGENT_FLOW_ROOT" checkout -B "$AGENT_FLOW_REF" "$target"
-  git -C "$AGENT_FLOW_ROOT" reset --hard "$target"
+  git_as_service -C "$AGENT_FLOW_ROOT" checkout -B "$AGENT_FLOW_REF" "$target"
+  git_as_service -C "$AGENT_FLOW_ROOT" reset --hard "$target"
   chown -R "$SERVICE_USER:$SERVICE_USER" "$AGENT_FLOW_ROOT"
   restart_when_idle "agent-flow updated"
 ) 9>"$LOCK_FILE"
