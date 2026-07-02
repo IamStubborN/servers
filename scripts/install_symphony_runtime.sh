@@ -42,6 +42,7 @@ trap 'rm -rf "$workspace"' EXIT
 
 cd "$workspace"
 symphony-playwright install-browser firefox
+mkdir -p artifacts/proof/SMOKE
 mkdir -p .playwright
 cat >.playwright/cli.config.json <<'JSON'
 {
@@ -50,10 +51,18 @@ cat >.playwright/cli.config.json <<'JSON'
   }
 }
 JSON
-symphony-playwright open "data:text/html,<title>playwright-cli-ok</title><button>ok</button>" >/dev/null
-if ! symphony-playwright snapshot >/dev/null 2>&1; then
+session="symphony-browser-smoke"
+symphony-playwright -s="$session" open "data:text/html,<title>playwright-cli-ok</title><button>ok</button>" >/dev/null
+symphony-playwright -s="$session" video-start artifacts/proof/SMOKE/walkthrough.webm >/dev/null
+symphony-playwright -s="$session" video-show-actions >/dev/null
+symphony-playwright -s="$session" screenshot --filename artifacts/proof/SMOKE/screenshot.png --full-page >/dev/null
+if ! symphony-playwright -s="$session" snapshot >/dev/null 2>&1; then
   find .playwright-cli -type f -name 'page-*.yml' | grep -q .
 fi
+symphony-playwright -s="$session" video-stop >/dev/null
+test -s artifacts/proof/SMOKE/screenshot.png
+test -s artifacts/proof/SMOKE/walkthrough.webm
+symphony-playwright -s="$session" close >/dev/null 2>&1 || true
 symphony-playwright close-all >/dev/null 2>&1 || true
 EOF
 chmod 0755 /usr/local/bin/symphony-browser-smoke
