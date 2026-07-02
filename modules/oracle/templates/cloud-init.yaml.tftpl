@@ -65,7 +65,8 @@ write_files:
         target="$3"
 
         if [ ! -d "$target/.git" ]; then
-          rm -rf "$target"
+          mkdir -p "$target"
+          find "$target" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
           git clone "$repo_url" "$target"
         fi
 
