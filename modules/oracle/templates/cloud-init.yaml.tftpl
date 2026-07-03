@@ -88,7 +88,11 @@ write_files:
       mkdir -p "$SYMPHONY_WORKSPACE_ROOT"
 
       sync_repo "$SYMPHONY_REPO_URL" "$SYMPHONY_REF" "$SYMPHONY_ROOT"
-      sync_repo "$AGENT_FLOW_REPO_URL" "$AGENT_FLOW_REF" "$AGENT_FLOW_ROOT"
+      if [ ! -d "$AGENT_FLOW_ROOT/.git" ]; then
+        sync_repo "$AGENT_FLOW_REPO_URL" "$AGENT_FLOW_REF" "$AGENT_FLOW_ROOT"
+      elif command -v symphony-agent-flow-refresh >/dev/null 2>&1; then
+        symphony-agent-flow-refresh --no-restart
+      fi
 
       git config --global --add safe.directory "$SYMPHONY_ROOT" || true
       git config --global --add safe.directory "$AGENT_FLOW_ROOT" || true
