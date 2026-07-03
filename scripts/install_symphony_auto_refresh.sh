@@ -114,6 +114,29 @@ EOF
 
 chmod 0755 /usr/local/bin/symphony-agent-flow-refresh
 
+cat >/usr/local/bin/symphony-promote-ready-wave <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ -f /etc/symphony/env ]; then
+  set -a
+  . /etc/symphony/env
+  set +a
+fi
+
+AGENT_FLOW_ROOT="${AGENT_FLOW_ROOT:-/opt/agent-flow}"
+PROMOTE_LIMIT="${READY_WAVE_PROMOTE_LIMIT:-4}"
+
+if [ ! -x "$AGENT_FLOW_ROOT/scripts/promote-ready-wave.py" ]; then
+  echo "symphony-promote-ready-wave: missing $AGENT_FLOW_ROOT/scripts/promote-ready-wave.py" >&2
+  exit 0
+fi
+
+exec "$AGENT_FLOW_ROOT/scripts/promote-ready-wave.py" --apply --quiet --limit "$PROMOTE_LIMIT"
+EOF
+
+chmod 0755 /usr/local/bin/symphony-promote-ready-wave
+
 cat >/etc/systemd/system/symphony-agent-flow-refresh.service <<EOF
 [Unit]
 Description=Refresh Agent Flow and restart Symphony when idle
@@ -141,5 +164,36 @@ Persistent=true
 WantedBy=timers.target
 EOF
 
+cat >/etc/systemd/system/symphony-promote-ready-wave.service <<EOF
+[Unit]
+Description=Promote unblocked Linear issues into the Symphony ready queue
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=/etc/symphony/env
+
+[Service]
+Type=oneshot
+User=$SERVICE_USER
+Group=$SERVICE_USER
+EnvironmentFile=/etc/symphony/env
+Environment=PATH=/var/lib/symphony/.local/bin:/var/lib/symphony/.local/share/mise/shims:/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/local/bin/symphony-promote-ready-wave
+EOF
+
+cat >/etc/systemd/system/symphony-promote-ready-wave.timer <<'EOF'
+[Unit]
+Description=Periodically promote ready Linear issues for Symphony
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=1min
+RandomizedDelaySec=15s
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+
 systemctl daemon-reload
 systemctl enable --now symphony-agent-flow-refresh.timer
+systemctl enable --now symphony-promote-ready-wave.timer
