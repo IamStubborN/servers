@@ -244,7 +244,7 @@ Type=oneshot
 User=$SERVICE_USER
 Group=$SERVICE_USER
 EnvironmentFile=/etc/symphony/env
-Environment=PATH=/var/lib/symphony/.local/bin:/var/lib/symphony/.local/share/mise/shims:/usr/local/bin:/usr/bin:/bin
+Environment=PATH=/var/lib/symphony/.local/bin:/var/lib/symphony/.local/share/mise/shims:/usr/local/bin:/usr/bin:/usr/sbin:/bin:/sbin
 ExecStart=/usr/local/bin/symphony-promote-ready-wave
 EOF
 

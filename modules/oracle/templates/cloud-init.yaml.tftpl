@@ -13,6 +13,7 @@ packages:
   - ncurses-devel
   - openssl-devel
   - openssh-clients
+  - oracle-epel-release-el9
   - perl
   - readline-devel
   - tar
@@ -99,7 +100,7 @@ write_files:
 
       export AGENT_FLOW_ROOT
       export SYMPHONY_WORKSPACE_ROOT
-      export PATH="${state_root}/.local/bin:${state_root}/.local/share/mise/shims:/usr/local/bin:/usr/bin:/bin"
+      export PATH="${state_root}/.local/bin:${state_root}/.local/share/mise/shims:/usr/local/bin:/usr/bin:/usr/sbin:/bin:/sbin"
 
       cd "$SYMPHONY_ROOT/elixir"
       mise trust
@@ -111,6 +112,11 @@ write_files:
     permissions: "0755"
     content: |
 ${indent(6, install_runtime)}
+  - path: /usr/local/bin/symphony-install-agent-tools
+    owner: root:root
+    permissions: "0755"
+    content: |
+${indent(6, install_agent_tools)}
   - path: /usr/local/bin/symphony-install-auto-refresh
     owner: root:root
     permissions: "0755"
@@ -135,7 +141,7 @@ ${indent(6, install_auto_refresh)}
       Environment=AGENT_FLOW_ROOT=${agent_flow_root}
       Environment=SYMPHONY_WORKSPACE_ROOT=${workspace_root}
       Environment=CODEX_HOME=${state_root}/.codex
-      Environment=PATH=${state_root}/.local/bin:${state_root}/.local/share/mise/shims:/usr/local/bin:/usr/bin:/bin
+      Environment=PATH=${state_root}/.local/bin:${state_root}/.local/share/mise/shims:/usr/local/bin:/usr/bin:/usr/sbin:/bin:/sbin
       ExecStartPre=/usr/local/bin/symphony-sync
       ExecStart=/bin/bash -lc 'cd ${symphony_root}/elixir && mise exec -- ./bin/symphony --i-understand-that-this-will-be-running-without-the-usual-guardrails ${agent_flow_root}/WORKFLOW.md --port ${dashboard_port}'
       TimeoutStartSec=1800
@@ -155,6 +161,7 @@ runcmd:
   - ssh-keyscan github.com > ${state_root}/.ssh/known_hosts
   - chown ${service_user}:${service_user} ${state_root}/.ssh/known_hosts
   - chmod 644 ${state_root}/.ssh/known_hosts
+  - /usr/local/bin/symphony-install-agent-tools
   - command -v gh >/dev/null 2>&1 || (dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo && dnf install -y gh)
   - runuser -l ${service_user} -c 'curl -fsSL https://mise.run | MISE_INSTALL_MUSL=1 sh'
   - SERVICE_USER=${service_user} STATE_ROOT=${state_root} /usr/local/bin/symphony-install-runtime

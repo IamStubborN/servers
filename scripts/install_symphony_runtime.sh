@@ -7,6 +7,8 @@ BROWSER_HEALTH_FILE="${BROWSER_HEALTH_FILE:-$STATE_ROOT/browser-runtime-health.e
 
 dnf install -y firefox libX11-xcb
 
+install -d -m 0755 -o "$SERVICE_USER" -g "$SERVICE_USER" "$STATE_ROOT/.config" "$STATE_ROOT/.cache"
+chown -R "$SERVICE_USER:$SERVICE_USER" "$STATE_ROOT/.config" "$STATE_ROOT/.cache"
 install -d -m 0755 -o "$SERVICE_USER" -g "$SERVICE_USER" "$STATE_ROOT/.config/mise"
 cat >"$STATE_ROOT/.config/mise/config.toml" <<'EOF'
 [tools]
@@ -16,7 +18,8 @@ python = "3.12"
 "npm:@playwright/cli" = "0.1.15"
 EOF
 chown "$SERVICE_USER:$SERVICE_USER" "$STATE_ROOT/.config/mise/config.toml"
-runuser -l "$SERVICE_USER" -c 'export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:/usr/local/bin:/usr/bin:/bin"; mise install --yes'
+runuser -l "$SERVICE_USER" -c 'export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:/usr/local/bin:/usr/bin:/usr/sbin:/bin:/sbin"; mise install --yes'
+runuser -l "$SERVICE_USER" -c 'export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:/usr/local/bin:/usr/bin:/usr/sbin:/bin:/sbin"; export GOBIN="$HOME/.local/bin"; mkdir -p "$GOBIN"; go install github.com/mikefarah/yq/v4@latest; go install mvdan.cc/sh/v3/cmd/shfmt@latest'
 
 cat >/usr/local/bin/symphony-playwright <<EOF
 #!/usr/bin/env bash
@@ -120,6 +123,6 @@ JSON
 EOF
 chmod 0755 /usr/local/bin/symphony-playwright-config
 
-runuser -l "$SERVICE_USER" -c "export STATE_ROOT='$STATE_ROOT' BROWSER_HEALTH_FILE='$BROWSER_HEALTH_FILE' PATH=\"\$HOME/.local/bin:\$HOME/.local/share/mise/shims:/usr/local/bin:/usr/bin:/bin\"; symphony-browser-smoke"
+runuser -l "$SERVICE_USER" -c "export STATE_ROOT='$STATE_ROOT' BROWSER_HEALTH_FILE='$BROWSER_HEALTH_FILE' PATH=\"\$HOME/.local/bin:\$HOME/.local/share/mise/shims:/usr/local/bin:/usr/bin:/usr/sbin:/bin:/sbin\"; symphony-browser-smoke"
 
-runuser -l "$SERVICE_USER" -c 'export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:/usr/local/bin:/usr/bin:/bin"; node --version; npm --version; go version; playwright-cli --version; symphony-playwright --version'
+runuser -l "$SERVICE_USER" -c 'export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:/usr/local/bin:/usr/bin:/usr/sbin:/bin:/sbin"; node --version; npm --version; go version; playwright-cli --version; symphony-playwright --version; yq --version; shfmt --version'
