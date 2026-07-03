@@ -105,6 +105,7 @@ restart_when_idle() {
   fi
 
   log "updating $AGENT_FLOW_ROOT $current -> $target"
+  git_as_service -C "$AGENT_FLOW_ROOT" clean -fd
   git_as_service -C "$AGENT_FLOW_ROOT" checkout -B "$AGENT_FLOW_REF" "$target"
   git_as_service -C "$AGENT_FLOW_ROOT" reset --hard "$target"
   chown -R "$SERVICE_USER:$SERVICE_USER" "$AGENT_FLOW_ROOT"
