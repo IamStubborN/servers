@@ -14,6 +14,7 @@ data "oci_core_images" "this" {
 
 locals {
   availability_domain  = data.oci_identity_availability_domains.this.availability_domains[var.availability_domain_index].name
+  install_agent_tools  = file("${path.module}/../../scripts/install_agent_cli_tools.sh")
   install_auto_refresh = file("${path.module}/../../scripts/install_symphony_auto_refresh.sh")
   install_runtime      = file("${path.module}/../../scripts/install_symphony_runtime.sh")
   cloud_init = templatefile("${path.module}/templates/cloud-init.yaml.tftpl", {
@@ -21,6 +22,7 @@ locals {
     agent_flow_root      = var.agent_flow_root
     agent_flow_ref       = var.agent_flow_ref
     dashboard_port       = var.symphony_dashboard_port
+    install_agent_tools  = local.install_agent_tools
     install_auto_refresh = local.install_auto_refresh
     install_runtime      = local.install_runtime
     service_user         = var.symphony_service_user
