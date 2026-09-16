@@ -129,8 +129,12 @@ resource "oci_core_instance" "this" {
   }
 
   lifecycle {
+    # Boot image is pinned at create time. data.oci_core_images always returns
+    # the newest platform image, which would otherwise show perpetual in-place
+    # drift on every CI plan without actually reimaging the VM usefully.
     ignore_changes = [
       metadata["user_data"],
+      source_details,
     ]
   }
 }

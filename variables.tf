@@ -39,3 +39,26 @@ variable "ssh_public_key" {
   type        = string
   sensitive   = true
 }
+
+variable "cloudflare_api_key" {
+  description = "Cloudflare Global API Key (or compatible key) for tunnel management."
+  type        = string
+  sensitive   = true
+}
+
+variable "cloudflare_email" {
+  description = "Cloudflare account email for Global API Key auth."
+  type        = string
+  sensitive   = true
+}
+
+variable "cloudflare_account_id" {
+  description = "Cloudflare account ID."
+  type        = string
+  sensitive   = true
+}
+
+variable "cloudflare_zone_id" {
+  description = "Cloudflare zone ID for example.com."
+  type        = string
+}
