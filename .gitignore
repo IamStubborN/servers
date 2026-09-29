@@ -14,3 +14,13 @@ override.tf.json
 *.pem
 *.key
 .env
+
+.env.*
+!.env.example
+.private/
+.terraform-validate/
+*.tfvars.json
+*.tfplan
+*.plan
+*.plan.json
+__pycache__/

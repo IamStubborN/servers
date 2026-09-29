@@ -43,7 +43,7 @@ variable "agent_flow_ref" {
 variable "agent_flow_repo_url" {
   description = "Git URL for the agent-flow checkout."
   type        = string
-  default     = "git@github.com:example/application.git"
+  sensitive   = true
 }
 
 variable "agent_flow_root" {

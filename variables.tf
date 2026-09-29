@@ -59,6 +59,17 @@ variable "cloudflare_account_id" {
 }
 
 variable "cloudflare_zone_id" {
-  description = "Cloudflare zone ID for example.com."
+  description = "Cloudflare zone ID for the private deployment."
   type        = string
+}
+
+variable "vaultwarden_hostname" {
+  description = "Vaultwarden hostname supplied through private configuration."
+  type        = string
+}
+
+variable "agent_flow_repo_url" {
+  description = "Private application repository used by the runner."
+  type        = string
+  sensitive   = true
 }

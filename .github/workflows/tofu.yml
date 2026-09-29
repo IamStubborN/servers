@@ -1,5 +1,8 @@
 name: OpenTofu
 
+permissions:
+  contents: read
+
 on:
   pull_request:
   push:
@@ -8,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       apply:
-        description: "Apply infrastructure changes"
+        description: "Apply the plan from this run (default: plan only)"
         required: true
         default: false
         type: boolean
@@ -21,32 +24,23 @@ jobs:
   validate:
     name: Validate Infrastructure
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v7.0.0
-
       - name: Setup mise
         uses: jdx/mise-action@v4.2.0
-
       - name: Check
         run: mise run check
 
-  apply:
-    name: Apply Infrastructure
-    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.apply == true) }}
+  plan:
+    name: Manual plan
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     needs: validate
     runs-on: ubuntu-latest
-
     env:
+      TF_IN_AUTOMATION: "1"
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      OCI_PRIVATE_KEY: ${{ secrets.OCI_PRIVATE_KEY }}
-      OCI_SSH_PRIVATE_KEY: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
-      SYMPHONY_CODEX_AUTH_JSON_B64: ${{ secrets.SYMPHONY_CODEX_AUTH_JSON_B64 }}
-      SYMPHONY_GITHUB_SSH_PRIVATE_KEY: ${{ secrets.SYMPHONY_GITHUB_SSH_PRIVATE_KEY }}
-      SYMPHONY_GITHUB_TOKEN: ${{ secrets.SYMPHONY_GITHUB_TOKEN }}
-      SYMPHONY_LINEAR_API_KEY: ${{ secrets.SYMPHONY_LINEAR_API_KEY }}
       TF_VAR_compartment_ocid: ${{ secrets.OCI_COMPARTMENT_OCID }}
       TF_VAR_fingerprint: ${{ secrets.OCI_FINGERPRINT }}
       TF_VAR_private_key_path: ${{ github.workspace }}/oci_api_key.pem
@@ -60,35 +54,48 @@ jobs:
       TF_VAR_cloudflare_email: ${{ secrets.CF_API_EMAIL }}
       TF_VAR_cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       TF_VAR_cloudflare_zone_id: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+      TF_VAR_vaultwarden_hostname: ${{ secrets.VAULTWARDEN_HOSTNAME }}
+      TF_VAR_agent_flow_repo_url: ${{ secrets.AGENT_FLOW_REPO_URL }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v7.0.0
-
       - name: Setup mise
         uses: jdx/mise-action@v4.2.0
-
-      - name: Create OCI API key
+      - name: Require main for manual apply
+        if: ${{ inputs.apply == true && github.ref != 'refs/heads/main' }}
         run: |
+          echo 'Manual apply is allowed only from main.' >&2
+          exit 1
+      - name: Create private OCI key and backend config
+        env:
+          OCI_PRIVATE_KEY: ${{ secrets.OCI_PRIVATE_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+        run: |
+          umask 077
           printf '%s\n' "$OCI_PRIVATE_KEY" > oci_api_key.pem
-          chmod 600 oci_api_key.pem
-
-      - name: Create backend config
+          printf 'endpoints = { s3 = "https://%s.r2.cloudflarestorage.com" }\n' "$R2_ACCOUNT_ID" > backend.hcl
+      - name: OpenTofu init
         run: |
-          cat > backend.hcl <<'EOF'
-          endpoints = {
-            s3 = "https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com"
-          }
-          EOF
-
-      - name: OpenTofu Init
-        run: mise run ci-init
-
-      - name: OpenTofu Apply
-        run: mise run ci-apply
-
-      - name: Verify Oracle instance health
-        run: mise run ci-health-check
-
-      - name: Bootstrap Symphony runtime
-        run: mise run ci-bootstrap-symphony
+          umask 077
+          mkdir -p .private
+          chmod 700 .private
+          if ! mise run ci-init > .private/ci-init.log 2>&1; then
+            echo 'OpenTofu init failed. Private log: .private/ci-init.log' >&2
+            exit 1
+          fi
+      - name: OpenTofu plan
+        run: |
+          set +e
+          scripts/ci_plan.sh
+          status=$?
+          set -e
+          if [ "$status" -eq 1 ]; then
+            exit 1
+          fi
+          if [ "$status" -eq 2 ] && [ "${{ inputs.apply }}" != "true" ]; then
+            exit 2
+          fi
+      - name: Apply this run's saved plan
+        if: ${{ inputs.apply == true && github.ref == 'refs/heads/main' }}
+        run: scripts/ci_apply.sh

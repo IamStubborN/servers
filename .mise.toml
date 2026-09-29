@@ -21,8 +21,8 @@ run = "tofu fmt -check -recursive"
 [tasks.validate]
 description = "Validate the root OpenTofu configuration without remote backend."
 run = [
-  "rm -rf .terraform && tofu init -backend=false -input=false",
-  "tofu validate",
+  "TF_DATA_DIR=.terraform-validate tofu init -backend=false -input=false",
+  "TF_DATA_DIR=.terraform-validate tofu validate",
 ]
 
 [tasks.workflow-check]
@@ -30,8 +30,12 @@ description = "Validate GitHub Actions workflows."
 run = "actionlint"
 
 [tasks.check]
-depends = ["fmt-check", "validate", "workflow-check"]
+depends = ["fmt-check", "validate", "workflow-check", "test-ci"]
 description = "Run all local checks."
+
+[tasks.test-ci]
+description = "Run CI safety regression tests with a mock tofu CLI."
+run = "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests"
 
 [tasks.init]
 description = "Initialize OpenTofu with local backend config when present."
@@ -72,9 +76,12 @@ description = "Initialize OpenTofu in CI."
 run = "tofu init -backend-config=backend.hcl -input=false"
 
 [tasks.ci-apply]
-description = "Apply OpenTofu in CI, replacing a missing or terminated Oracle instance."
-depends = ["deps"]
+description = "Apply the saved plan after explicit manual dispatch."
 run = "scripts/ci_apply.sh"
+
+[tasks.ci-plan]
+description = "Create a private, read-only CI plan and print only action counts."
+run = "scripts/ci_plan.sh"
 
 [tasks.ci-health-check]
 description = "Verify Oracle instance lifecycle and SSH reachability in CI."

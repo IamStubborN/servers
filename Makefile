@@ -1,4 +1,4 @@
-.PHONY: init plan apply apply-auto destroy fmt fmt-check validate workflow-check check state-list refresh
+.PHONY: init plan apply apply-auto destroy fmt fmt-check validate workflow-check check state-list refresh ci-plan test-ci
 
 init:
 	@mise run init
@@ -35,3 +35,9 @@ state-list:
 
 refresh:
 	@mise run refresh
+
+ci-plan:
+	@mise run ci-plan
+
+test-ci:
+	@mise run test-ci

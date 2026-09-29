@@ -2,6 +2,7 @@
 set -euo pipefail
 
 required_env=(
+  AGENT_FLOW_REPO_URL
   OCI_SSH_PRIVATE_KEY
   SYMPHONY_CODEX_AUTH_JSON_B64
   SYMPHONY_GITHUB_SSH_PRIVATE_KEY
@@ -43,7 +44,7 @@ chmod 600 "$tmp_dir/symphony-github-key"
   printf "LINEAR_API_KEY=%s\n" "$(shell_quote "$SYMPHONY_LINEAR_API_KEY")"
   printf "GH_TOKEN=%s\n" "$(shell_quote "$SYMPHONY_GITHUB_TOKEN")"
   printf "GITHUB_TOKEN=%s\n" "$(shell_quote "$SYMPHONY_GITHUB_TOKEN")"
-  printf "AGENT_FLOW_REPO_URL=git@github.com:example/application.git\n"
+  printf "AGENT_FLOW_REPO_URL=%s\n" "$(shell_quote "$AGENT_FLOW_REPO_URL")"
   printf "AGENT_FLOW_REF=main\n"
   printf "AGENT_FLOW_ROOT=/opt/agent-flow\n"
   printf "SYMPHONY_REPO_URL=https://github.com/openai/symphony.git\n"
@@ -124,7 +125,7 @@ fi
 
 sudo -u symphony -H bash -lc 'set -euo pipefail; cd /var/lib/symphony; export CODEX_HOME=/var/lib/symphony/.codex; export PATH=/var/lib/symphony/.local/bin:/var/lib/symphony/.local/share/mise/shims:/usr/local/bin:/usr/bin:/usr/sbin:/bin:/sbin; codex login status'
 sudo -u symphony -H bash -lc 'set -euo pipefail; cd /var/lib/symphony; export PATH=/var/lib/symphony/.local/bin:/var/lib/symphony/.local/share/mise/shims:/usr/local/bin:/usr/bin:/usr/sbin:/bin:/sbin; set -a; . /etc/symphony/env; set +a; gh api user >/dev/null'
-sudo -u symphony -H bash -lc 'set -euo pipefail; cd /var/lib/symphony; export PATH=/var/lib/symphony/.local/bin:/var/lib/symphony/.local/share/mise/shims:/usr/local/bin:/usr/bin:/usr/sbin:/bin:/sbin; rm -rf /tmp/agent-flow-bootstrap-smoke; git clone --depth 1 git@github.com:example/application.git /tmp/agent-flow-bootstrap-smoke >/dev/null; test -d /tmp/agent-flow-bootstrap-smoke/.git; rm -rf /tmp/agent-flow-bootstrap-smoke'
+sudo -u symphony -H bash -lc 'set -euo pipefail; cd /var/lib/symphony; export PATH=/var/lib/symphony/.local/bin:/var/lib/symphony/.local/share/mise/shims:/usr/local/bin:/usr/bin:/usr/sbin:/bin:/sbin; rm -rf /tmp/agent-flow-bootstrap-smoke; set -a; . /etc/symphony/env; set +a; git clone --depth 1 "$AGENT_FLOW_REPO_URL" /tmp/agent-flow-bootstrap-smoke >/dev/null; test -d /tmp/agent-flow-bootstrap-smoke/.git; rm -rf /tmp/agent-flow-bootstrap-smoke'
 sudo -u symphony -H bash -lc 'set -euo pipefail; cd /var/lib/symphony; export PATH=/var/lib/symphony/.local/bin:/var/lib/symphony/.local/share/mise/shims:/usr/local/bin:/usr/bin:/usr/sbin:/bin:/sbin; node --version >/dev/null; npm --version >/dev/null; go version >/dev/null; playwright-cli --version >/dev/null; symphony-playwright --version >/dev/null; yq --version >/dev/null; shfmt --version >/dev/null; rg --version >/dev/null; (fd --version >/dev/null 2>&1 || fdfind --version >/dev/null); jq --version >/dev/null; shellcheck --version >/dev/null; delta --version >/dev/null; bat --version >/dev/null; hyperfine --version >/dev/null; ip -V >/dev/null; command -v nc >/dev/null; command -v tcpdump >/dev/null; podman --version >/dev/null; buildah --version >/dev/null; skopeo --version >/dev/null; rm -rf /tmp/playwright-config-smoke; mkdir -p /tmp/playwright-config-smoke; cd /tmp/playwright-config-smoke; symphony-playwright-config; grep -q firefox .playwright/cli.config.json; cd /var/lib/symphony; rm -rf /tmp/playwright-config-smoke; symphony-browser-smoke'
 sudo ss -ltn | grep -q '127.0.0.1:4097'
 

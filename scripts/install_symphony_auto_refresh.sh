@@ -40,7 +40,7 @@ fi
 
 AGENT_FLOW_ROOT="${AGENT_FLOW_ROOT:-/opt/agent-flow}"
 AGENT_FLOW_REF="${AGENT_FLOW_REF:-main}"
-AGENT_FLOW_REPO_URL="${AGENT_FLOW_REPO_URL:-git@github.com:example/application.git}"
+AGENT_FLOW_REPO_URL="${AGENT_FLOW_REPO_URL:?Set AGENT_FLOW_REPO_URL in the private runtime environment}"
 SERVICE_HOME="$(getent passwd "$SERVICE_USER" | cut -d: -f6)"
 current="unknown"
 target="unknown"

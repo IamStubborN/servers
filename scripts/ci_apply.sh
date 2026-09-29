@@ -1,26 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077
 
-{
-  instance_id="$(tofu state show -no-color module.oracle.oci_core_instance.this 2>/dev/null | awk -F'= ' '/^ *id +=/ { gsub(/"/, "", $2); print $2; exit }' || true)"
+private_dir="${CI_PRIVATE_DIR:-.private}"
+plan_file="$private_dir/ci.plan"
+log_file="$private_dir/ci-apply.log"
 
-  if [ -z "$instance_id" ]; then
-    tofu apply -auto-approve -input=false -no-color
-    exit 0
-  fi
+if [ ! -f "$plan_file" ]; then
+  printf 'Saved plan is missing: %s\n' "$plan_file" >&2
+  exit 1
+fi
 
-  set +e
-  python scripts/oci_instance_status.py --instance-id "$instance_id" --replace-exit-code
-  status=$?
-  set -e
-
-  if [ "$status" -eq 2 ]; then
-    tofu apply -replace=module.oracle.oci_core_instance.this -auto-approve -input=false -no-color
-  elif [ "$status" -eq 0 ]; then
-    tofu apply -auto-approve -input=false -no-color
-  else
-    exit "$status"
-  fi
-} 2>&1 | sed -E \
-  -e 's/ocid1\.[[:alnum:]._-]+/[redacted-ocid]/g' \
-  -e 's/([0-9]{1,3}\.){3}[0-9]{1,3}/[redacted-ip]/g'
+if tofu apply -input=false -no-color "$plan_file" > "$log_file" 2>&1; then
+  printf 'Apply completed. Private log: %s\n' "$log_file"
+else
+  printf 'Apply failed. Private log: %s\n' "$log_file" >&2
+  exit 1
+fi

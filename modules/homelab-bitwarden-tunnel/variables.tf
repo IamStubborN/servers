@@ -5,14 +5,13 @@ variable "account_id" {
 }
 
 variable "zone_id" {
-  description = "Cloudflare zone ID for example.com."
+  description = "Cloudflare zone ID for the private deployment."
   type        = string
 }
 
 variable "hostname" {
   description = "Public hostname served by the tunnel."
   type        = string
-  default     = "vaultwarden.example.com"
 }
 
 variable "origin_service" {
