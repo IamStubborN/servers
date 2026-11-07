@@ -82,12 +82,3 @@ run = "scripts/ci_apply.sh"
 [tasks.ci-plan]
 description = "Create a private, read-only CI plan and print only action counts."
 run = "scripts/ci_plan.sh"
-
-[tasks.ci-health-check]
-description = "Verify Oracle instance lifecycle and SSH reachability in CI."
-depends = ["deps"]
-run = "scripts/ci_health_check.sh"
-
-[tasks.ci-bootstrap-symphony]
-description = "Restore Symphony runtime secrets and verify the service in CI."
-run = "scripts/ci_bootstrap_symphony.sh"

@@ -1,5 +1,5 @@
 variable "region" {
-  description = "OCI region for the runner VM."
+  description = "OCI region for the shared network."
   type        = string
   sensitive   = true
 }
@@ -29,13 +29,7 @@ variable "private_key_path" {
 }
 
 variable "compartment_ocid" {
-  description = "Compartment that owns the runner VM."
-  type        = string
-  sensitive   = true
-}
-
-variable "ssh_public_key" {
-  description = "SSH public key installed on the runner VM."
+  description = "Compartment that owns the shared network."
   type        = string
   sensitive   = true
 }
@@ -66,10 +60,4 @@ variable "cloudflare_zone_id" {
 variable "vaultwarden_hostname" {
   description = "Vaultwarden hostname supplied through private configuration."
   type        = string
-}
-
-variable "agent_flow_repo_url" {
-  description = "Private application repository used by the runner."
-  type        = string
-  sensitive   = true
 }

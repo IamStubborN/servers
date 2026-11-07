@@ -1,11 +1,8 @@
 module "oracle" {
   source = "./modules/oracle"
 
-  # Keep shared networking after retiring the legacy runner.
-  create_instance     = false
-  compartment_ocid    = var.compartment_ocid
-  ssh_public_key      = var.ssh_public_key
-  agent_flow_repo_url = var.agent_flow_repo_url
+  # Shared networking remains after the legacy runner was retired.
+  compartment_ocid = var.compartment_ocid
 }
 
 # Homelab Vaultwarden public ingress (no Oracle/machine changes).

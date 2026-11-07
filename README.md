@@ -1,12 +1,12 @@
 # Infrastructure with OpenTofu
 
-OpenTofu modules for an Oracle Cloud runner and a Cloudflare Tunnel, with reusable Cloudflare and Hetzner modules. Deployment credentials and service addresses are supplied privately.
+OpenTofu modules for shared Oracle Cloud networking and a Cloudflare Tunnel, with reusable Cloudflare and Hetzner modules. Deployment credentials and service addresses are supplied privately.
 
 ## Local configuration
 
 Install the versions in `.mise.toml`, copy `.env.example` to `.env`, and copy `backend.hcl.example` to `backend.hcl`. Replace example values with your private deployment values. You can instead put non-environment inputs in a local `deployment.auto.tfvars.json` file. These files, private keys, state, plans, and `.private/` are ignored by Git; protect them with permissions appropriate for credentials.
 
-Required deployment inputs include `vaultwarden_hostname` and `agent_flow_repo_url`. The latter must also be set as `AGENT_FLOW_REPO_URL` when manually bootstrapping the application runtime. Real repository URLs and DNS names do not belong in tracked defaults.
+Required deployment inputs include `vaultwarden_hostname`. Real repository URLs and DNS names do not belong in tracked defaults.
 
 ```sh
 mise install
@@ -28,28 +28,26 @@ Pushes and pull requests run formatting, OpenTofu validation, workflow validatio
 
 Applying infrastructure requires an explicit manual `apply=true` dispatch from `main`. That run applies only its saved plan. There is no automatic replacement of terminated instances and no automatic runtime bootstrap. Review infrastructure changes before selecting this option. A plan-only verification does not prove that a future apply will succeed.
 
-Provider and backend credentials are GitHub Actions secrets. The additional deployment secrets are `VAULTWARDEN_HOSTNAME` and `AGENT_FLOW_REPO_URL`. OCI instance provisioning and application bootstrap are separate operations; the private runtime secrets used by `scripts/ci_bootstrap_symphony.sh` are needed only for an explicitly requested bootstrap.
+Provider and backend credentials are GitHub Actions secrets. The additional deployment secret is `VAULTWARDEN_HOSTNAME`. Standalone `install_*` scripts and the OCI status utility are reusable manual tools; this root configuration does not provision or bootstrap a VM.
 
 ## Existing deployments
 
-Keep the same backend, resource addresses, credentials, hostname, and application repository URL when moving deployment configuration out of source control. Run a plan before changing infrastructure. A source-code privacy cleanup should not require applying resource changes.
+Keep the same backend, resource addresses, credentials and hostname when moving deployment configuration out of source control. Run a plan before changing infrastructure. A source-code privacy cleanup should not require applying resource changes.
 
 ### Legacy Oracle runner retirement
 
-The root configuration disables only the legacy runner with
-`module.oracle.create_instance = false`. Its shared VCN, Internet gateway,
-route table, DHCP options, subnet and security list remain managed here; the
-working VPN hub depends on part of that network. Never destroy the whole
-Oracle module to retire the runner.
+The legacy runner definition, cloud-init template, instance outputs, inputs and
+runner-bound CI commands have been removed. The Oracle module now manages only
+its existing shared VCN, Internet gateway, route table, subnet and security list.
+Resource addresses and network defaults are preserved because the independently
+managed VPN hub depends on that network. Never destroy the whole Oracle module
+to retire a VM.
 
-The instance uses `preserve_boot_volume = false`, so its approved retirement
-also removes its boot disk. Instance outputs become null when disabled; legacy
-runner health/bootstrap commands do not apply to the independently managed VPN
-hub or other VPS instances. The moved block preserves the old resource identity
-when adopting the optional count. Review an actual saved plan and require only
-the intended instance deletion before applying; deployment status is recorded
-in the home repository's VPN runbook.
+The retired instance and its boot disk are already absent. Removing their source
+must produce a no-change plan before publication; no apply is needed for this
+cleanup. Deployment evidence belongs in the home repository's private VPN
+runbook. Other independently managed instances are outside this root's scope.
 
-Before a manual apply, verify that the selected revision keeps
-`module.oracle.create_instance = false`. Historical revisions that still declare
-the legacy runner can propose creating it again. CI does not apply automatically.
+Historical revisions that still declare the runner can propose creating it again.
+CI does not apply automatically; review the selected revision and its saved plan
+before any separately authorized manual apply.
