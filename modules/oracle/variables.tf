@@ -1,3 +1,9 @@
+variable "create_instance" {
+  description = "Create the legacy runner while retaining shared networking independently."
+  type        = bool
+  default     = true
+}
+
 variable "compartment_ocid" {
   description = "Compartment that owns the Oracle resources."
   type        = string

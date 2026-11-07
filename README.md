@@ -33,3 +33,23 @@ Provider and backend credentials are GitHub Actions secrets. The additional depl
 ## Existing deployments
 
 Keep the same backend, resource addresses, credentials, hostname, and application repository URL when moving deployment configuration out of source control. Run a plan before changing infrastructure. A source-code privacy cleanup should not require applying resource changes.
+
+### Legacy Oracle runner retirement
+
+The root configuration disables only the legacy runner with
+`module.oracle.create_instance = false`. Its shared VCN, Internet gateway,
+route table, DHCP options, subnet and security list remain managed here; the
+working VPN hub depends on part of that network. Never destroy the whole
+Oracle module to retire the runner.
+
+The instance uses `preserve_boot_volume = false`, so its approved retirement
+also removes its boot disk. Instance outputs become null when disabled; legacy
+runner health/bootstrap commands do not apply to the independently managed VPN
+hub or other VPS instances. The moved block preserves the old resource identity
+when adopting the optional count. Review an actual saved plan and require only
+the intended instance deletion before applying; deployment status is recorded
+in the home repository's VPN runbook.
+
+Before a manual apply, verify that the selected revision keeps
+`module.oracle.create_instance = false`. Historical revisions that still declare
+the legacy runner can propose creating it again. CI does not apply automatically.

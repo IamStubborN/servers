@@ -94,7 +94,15 @@ resource "oci_core_subnet" "public" {
   vcn_id                     = oci_core_vcn.this.id
 }
 
+// Preserve identity when an existing runner adopts the optional instance flag.
+moved {
+  from = oci_core_instance.this
+  to   = oci_core_instance.this[0]
+}
+
 resource "oci_core_instance" "this" {
+  count = var.create_instance ? 1 : 0
+
   availability_domain  = local.availability_domain
   compartment_id       = var.compartment_ocid
   display_name         = var.name
